@@ -361,7 +361,7 @@ export async function facturarPago(idPago: string) {
     }
 
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 segundos de timeout
+    const timeoutId = setTimeout(() => controller.abort(), 45000); // 45 segundos de timeout
 
     let response;
     try {
@@ -562,7 +562,7 @@ export async function facturarPagosLote(ids: string[]) {
 
     const payload = { comprobantes };
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 10000);
+    const timeoutId = setTimeout(() => controller.abort(), 45000);
 
     let response;
     try {

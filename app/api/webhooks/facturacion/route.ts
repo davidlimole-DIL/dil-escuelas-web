@@ -80,12 +80,11 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ ok: true, warning: "Pago no encontrado" });
     }
 
-    if (pago.estado !== "EN_PROCESO_AFIP") {
+    if (pago.estado === "FACTURADO") {
       console.warn(
-        `[Webhook Facturación] Pago ${idPago} no está EN_PROCESO_AFIP (estado actual: ${pago.estado}). Ignorando.`
+        `[Webhook Facturación] Pago ${idPago} ya está FACTURADO. Ignorando reintento.`
       );
-      // Respondemos 200 — idempotencia: si ya fue procesado, no hacemos nada
-      return NextResponse.json({ ok: true, warning: "Estado ya procesado" });
+      return NextResponse.json({ ok: true, warning: "Estado ya procesado (FACTURADO)" });
     }
 
     // 5. Procesar según resultado
