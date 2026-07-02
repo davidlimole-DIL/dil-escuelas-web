@@ -79,7 +79,7 @@ export default function FacturacionClient({
     setTimeout(() => setToast(null), 5000);
   };
 
-  const handleRefresh = useCallback(async (isBackground = false) => {
+  const handleRefresh = useCallback(async (isBackground: boolean = false) => {
     if (!isBackground) setLoading(true);
     const [pRes, hRes] = await Promise.all([
       obtenerPagosParaFacturar(),
@@ -381,7 +381,7 @@ export default function FacturacionClient({
             </div>
           )}
           <button
-            onClick={handleRefresh}
+            onClick={() => handleRefresh(false)}
             disabled={loading || isBilling || bulkActive}
             className="bg-indigo-600 text-white px-5 py-2.5 rounded-xl text-sm font-bold hover:bg-indigo-700 transition-all shadow-md active:scale-95 flex items-center gap-2 cursor-pointer disabled:opacity-50"
           >
