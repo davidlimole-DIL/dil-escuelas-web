@@ -69,6 +69,25 @@ function comprimirImagen(file: File): Promise<File> {
   });
 }
 
+// Función de utilidad para formatear CUIL como XX-XXXXXXXX-X
+function formatearCuil(rawCuil: string | null | undefined): string {
+  if (!rawCuil) return "";
+  const soloNumeros = String(rawCuil).replace(/\D/g, "");
+  if (soloNumeros.length === 11) {
+    return `${soloNumeros.slice(0, 2)}-${soloNumeros.slice(2, 10)}-${soloNumeros.slice(10)}`;
+  }
+  return String(rawCuil);
+}
+
+// Función de utilidad para obtener la fecha de hoy en formato YYYY-MM-DD
+function getFechaHoyISO(): string {
+  const d = new Date();
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
 export default function PortalAlumno() {
   const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
@@ -81,9 +100,15 @@ export default function PortalAlumno() {
 
   // Variables Pago
   const [monto, setMonto] = useState("");
-  const [fecha, setFecha] = useState("");
+  const [fecha, setFecha] = useState(getFechaHoyISO);
   const [uploading, setUploading] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
+
+  const abrirModalPago = (montoInicial: string = "") => {
+    setMonto(montoInicial);
+    setFecha(getFechaHoyISO());
+    setModalPago(true);
+  };
 
   // Variables Legajo
   const [selectedSlotId, setSelectedSlotId] = useState("");
@@ -143,7 +168,7 @@ export default function PortalAlumno() {
         mostrarAlerta("¡Pago Informado!", "El comprobante fue subido correctamente y será validado por la institución a la brevedad.", "success");
         setModalPago(false);
         setMonto("");
-        setFecha("");
+        setFecha(getFechaHoyISO());
         cargarDatos();
       }
     };
@@ -249,7 +274,7 @@ export default function PortalAlumno() {
               <div className="text-center leading-none">
                 <p className="text-indigo-200 text-sm mb-1">Bienvenido/a,</p>
                 <h3 className="text-2xl md:text-3xl font-black tracking-tight uppercase">{data.nombre}</h3>
-                <p className="text-xs text-indigo-300 font-mono mt-1.5">CUIL: {data.cuil}</p>
+                <p className="text-xs text-indigo-300 font-mono mt-1.5">CUIL: {formatearCuil(data.cuil)}</p>
               </div>
               <div className="text-center w-full border-t border-indigo-800/50 pt-4 leading-none">
                 <p className="text-indigo-200 text-sm font-medium mb-2">
@@ -268,113 +293,108 @@ export default function PortalAlumno() {
             </div>
           </div>
 
-          {/* Tabla de Movimientos */}
-          <div className="bg-white rounded-2xl shadow-md border border-slate-100 overflow-hidden mb-8 w-full relative">
-            <div className="overflow-x-auto w-full scrollbar-thin">
-              <div className="w-full min-w-[500px]">
-                {/* Cabecera */}
-                <div className="flex justify-between items-center p-3 sm:p-4 bg-slate-100 text-[11px] font-bold text-slate-500 border-b border-slate-200 uppercase tracking-wider">
-                  <div className="flex-1 pl-1">Detalle del Movimiento</div>
-                  <div className="text-right w-[120px] sm:w-[150px]">Importe</div>
-                  <div className="text-center w-[100px] sm:w-[130px] pr-1">Estado</div>
-                </div>
+          {/* Tabla de Movimientos Adaptada 100% a Celulares */}
+          <div className="bg-white rounded-2xl shadow-md border border-slate-100 overflow-hidden mb-8 w-full">
+            {/* Cabecera */}
+            <div className="flex justify-between items-center p-3 sm:p-4 bg-slate-100 text-[11px] font-bold text-slate-500 border-b border-slate-200 uppercase tracking-wider">
+              <div className="flex-1 pl-1">Detalle del Movimiento</div>
+              <div className="text-right pr-1">Importe / Estado</div>
+            </div>
 
-                {/* Filas */}
-                <div className="flex flex-col divide-y divide-slate-100">
-                  {data.movimientos.length > 0 ? (
-                    data.movimientos.map((m: any, i: number) => {
-                      const isDebe = m.tipo === 'DEBE';
-                      const colorMonto = isDebe ? 'text-slate-800' : 'text-emerald-600 font-bold drop-shadow-sm';
-                      
-                      let colorEstado = 'bg-slate-100 text-slate-600 border-slate-200';
-                      if (m.estado === 'Validación' || m.estado === 'Pendiente') {
-                        colorEstado = 'bg-amber-100 text-amber-800 border-amber-200';
-                      } else if (m.estado === 'Rechazado') {
-                        colorEstado = 'bg-rose-100 text-rose-800 border-rose-200';
-                      } else if (m.estado === 'Aprobado' || m.estado === 'FACTURADO') {
-                        colorEstado = 'bg-emerald-100 text-emerald-800 border-emerald-200';
-                      }
+            {/* Filas */}
+            <div className="flex flex-col divide-y divide-slate-100">
+              {data.movimientos.length > 0 ? (
+                data.movimientos.map((m: any, i: number) => {
+                  const isDebe = m.tipo === 'DEBE';
+                  // Cuotas (DEBE) en ROJO con signo negativo (-$)
+                  // Pagos (HABER) en VERDE con signo positivo (+$)
+                  const colorMonto = isDebe ? 'text-rose-600 font-extrabold' : 'text-emerald-600 font-extrabold';
+                  const signo = isDebe ? '-$ ' : '+$ ';
+                  
+                  let colorEstado = 'bg-slate-100 text-slate-600 border-slate-200';
+                  if (m.estado === 'Validación' || m.estado === 'Pendiente') {
+                    colorEstado = 'bg-amber-100 text-amber-800 border-amber-200';
+                  } else if (m.estado === 'Rechazado') {
+                    colorEstado = 'bg-rose-100 text-rose-800 border-rose-200';
+                  } else if (m.estado === 'Aprobado' || m.estado === 'FACTURADO') {
+                    colorEstado = 'bg-emerald-100 text-emerald-800 border-emerald-200';
+                  }
 
-                      const filaBg = m.estado === 'Rechazado' ? 'bg-rose-50/50 hover:bg-rose-50' : 'hover:bg-slate-50/70';
+                  const filaBg = m.estado === 'Rechazado' ? 'bg-rose-50/50 hover:bg-rose-50' : 'hover:bg-slate-50/70';
 
-                      return (
-                        <div key={i} className={`flex items-center justify-between p-3.5 sm:p-4 border-b border-slate-50 transition-colors gap-2 ${filaBg}`}>
-                           {/* Detalle */}
-                           <div className="flex flex-col flex-1 min-w-0 pr-2">
-                             <span className="text-[11px] font-semibold text-slate-400">{m.fecha}</span>
-                             <span className="font-bold text-slate-700 text-[12px] sm:text-[13px] leading-tight mt-0.5 whitespace-normal break-words">{m.concepto}</span>
-                             
-                             {/* Motivo de rechazo de pago */}
-                             {m.estado === 'Rechazado' && m.observacion && (
-                               <span className="text-[10px] italic font-semibold text-rose-700 mt-1.5 px-2 py-0.5 rounded bg-rose-100/70 border-l-2 border-rose-500 w-fit flex items-center gap-1 shadow-sm">
-                                 ⚠ Motivo: {m.observacion}
-                               </span>
-                             )}
-                           </div>
+                  return (
+                    <div key={i} className={`flex items-start justify-between p-3.5 sm:p-4 border-b border-slate-50 transition-colors gap-3 ${filaBg}`}>
+                       {/* Detalle */}
+                       <div className="flex flex-col flex-1 min-w-0">
+                         <span className="text-[11px] font-semibold text-slate-400">{m.fecha}</span>
+                         <span className="font-bold text-slate-800 text-[13px] sm:text-[14px] leading-tight mt-0.5 whitespace-normal break-words">{m.concepto}</span>
+                         
+                         {/* Motivo de rechazo de pago */}
+                         {m.estado === 'Rechazado' && m.observacion && (
+                           <span className="text-[10px] italic font-semibold text-rose-700 mt-1.5 px-2 py-0.5 rounded bg-rose-100/70 border-l-2 border-rose-500 w-fit flex items-center gap-1 shadow-sm">
+                             ⚠ Motivo: {m.observacion}
+                           </span>
+                         )}
+                       </div>
 
-                           {/* Importe */}
-                           <div className="text-right w-[120px] sm:w-[150px] shrink-0 flex flex-col justify-center">
-                             <span className={`text-[14px] md:text-[16px] font-black tracking-tight ${colorMonto}`}>
-                               $ {m.importe.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                             </span>
-                           </div>
-
-                           {/* Estado y Botón PDF */}
-                           <div className="flex flex-col items-center justify-center gap-1.5 w-[100px] sm:w-[130px] pl-1 sm:pl-2 shrink-0">
-                             <span className={`border px-2 py-1 rounded-full text-[9px] font-bold uppercase tracking-wider text-center w-full ${colorEstado}`}>
-                               {m.estado}
-                             </span>
-                             {m.estado === 'FACTURADO' && m.comprobanteUrl && (
-                               <a 
-                                 href={m.comprobanteUrl} 
-                                 target="_blank" 
-                                 rel="noopener noreferrer" 
-                                 className="shrink-0 bg-white border border-slate-200 hover:border-teal-500 text-teal-700 hover:bg-teal-50 px-2 py-0.5 rounded-lg text-[9px] font-extrabold shadow-sm transition-all flex items-center gap-1"
-                                 title="Descargar PDF Factura"
-                               >
-                                 <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
-                                 PDF
-                               </a>
-                             )}
-                             {m.estado === 'Rechazado' && (
-                                <button 
-                                  onClick={() => {
-                                    setMonto(m.importe.toString());
-                                    setModalPago(true);
-                                  }} 
-                                  className="shrink-0 bg-rose-600 hover:bg-rose-700 hover:shadow-rose-600/20 text-white px-2 py-0.5 rounded-lg text-[9px] font-extrabold shadow-sm transition-all flex items-center justify-center gap-1 w-full"
-                                  title="Corregir pago"
-                                >
-                                  <svg className="w-2.5 h-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M4 4v5h.582m15.356 2A8.001 8.001 0 1121.21 7.89M9 11l3 3L22 4"></path></svg>
-                                  Corregir
-                                </button>
-                             )}
-                             {m.tipo === 'HABER' && m.estado === 'Pendiente' && (
-                                <button 
-                                  onClick={() => handleEliminarPago(m.id)} 
-                                  className="shrink-0 bg-rose-50 border border-rose-200 hover:border-rose-500 hover:bg-rose-100/50 text-rose-600 px-2 py-0.5 rounded-lg text-[9px] font-extrabold shadow-sm transition-all flex items-center justify-center gap-1 w-full"
-                                  title="Eliminar pago pendiente"
-                                >
-                                  <svg className="w-2.5 h-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
-                                  Cancelar
-                                </button>
-                             )}
-                           </div>
-                        </div>
-                      );
-                    })
-                  ) : (
-                    <div className="p-12 text-center text-slate-400 italic font-medium">No se registran movimientos en su estado de cuenta.</div>
-                  )}
-                </div>
-              </div>
+                       {/* Importe y Estado */}
+                       <div className="flex flex-col items-end shrink-0 text-right space-y-1">
+                         <span className={`text-[14px] sm:text-[16px] tracking-tight ${colorMonto}`}>
+                           {signo}{m.importe.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                         </span>
+                         
+                         <div className="flex items-center gap-1 justify-end">
+                           <span className={`border px-2 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider ${colorEstado}`}>
+                             {m.estado}
+                           </span>
+                           
+                           {m.estado === 'FACTURADO' && m.comprobanteUrl && (
+                             <a 
+                               href={m.comprobanteUrl} 
+                               target="_blank" 
+                               rel="noopener noreferrer" 
+                               className="bg-white border border-slate-200 hover:border-teal-500 text-teal-700 hover:bg-teal-50 px-2 py-0.5 rounded-lg text-[9px] font-extrabold shadow-sm transition-all flex items-center gap-1"
+                               title="Descargar PDF Factura"
+                             >
+                               <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+                               PDF
+                             </a>
+                           )}
+                           {m.estado === 'Rechazado' && (
+                             <button 
+                               onClick={() => abrirModalPago(m.importe.toString())} 
+                               className="bg-rose-600 hover:bg-rose-700 hover:shadow-rose-600/20 text-white px-2 py-0.5 rounded-lg text-[9px] font-extrabold shadow-sm transition-all flex items-center justify-center gap-1"
+                               title="Corregir pago"
+                             >
+                               <svg className="w-2.5 h-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M4 4v5h.582m15.356 2A8.001 8.001 0 1121.21 7.89M9 11l3 3L22 4"></path></svg>
+                               Corregir
+                             </button>
+                           )}
+                           {m.tipo === 'HABER' && m.estado === 'Pendiente' && (
+                             <button 
+                               onClick={() => handleEliminarPago(m.id)} 
+                               className="bg-rose-50 border border-rose-200 hover:border-rose-500 hover:bg-rose-100/50 text-rose-600 px-2 py-0.5 rounded-lg text-[9px] font-extrabold shadow-sm transition-all flex items-center justify-center gap-1"
+                               title="Eliminar pago pendiente"
+                             >
+                               <svg className="w-2.5 h-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                               Cancelar
+                             </button>
+                           )}
+                         </div>
+                       </div>
+                    </div>
+                  );
+                })
+              ) : (
+                <div className="p-12 text-center text-slate-400 italic font-medium">No se registran movimientos en su estado de cuenta.</div>
+              )}
             </div>
           </div>
 
           {/* Botón Flotante/Sticky para Informar Pago */}
           <div className="fixed bottom-6 left-4 right-4 md:sticky md:bottom-6 z-40 flex justify-center mt-6 pointer-events-none">
             <button 
-              onClick={() => setModalPago(true)} 
+              onClick={() => abrirModalPago()} 
               className="pointer-events-auto w-full md:w-auto bg-emerald-500 hover:bg-emerald-600 hover:shadow-emerald-500/40 text-white font-extrabold text-base md:text-md py-4 px-8 rounded-2xl md:rounded-full shadow-2xl transition-all active:scale-95 hover:scale-105 flex items-center justify-center gap-2"
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M12 4v16m8-8H4"></path></svg>
