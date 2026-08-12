@@ -1,9 +1,9 @@
 "use server";
 
 import { createClient } from "@/utils/supabase/server";
+import { createAdminClient } from "@/utils/supabase/admin";
 import { revalidatePath } from "next/cache";
 
-// Type definitions based on DB schema
 // Type definitions based on DB schema
 export type Alumno = {
   id: string; // UUID interno
@@ -15,6 +15,8 @@ export type Alumno = {
   telefono: string | null;
   domicilio: string | null;
   carrera: string | null;
+  carrera_id?: string | null;
+  carrera_diminutivo?: string | null;
   ano_ingreso: number | null;
   mes_ingreso: number | null;
   estado_academico: string;
@@ -62,13 +64,14 @@ async function generateNextIdAlumno(supabase: any, colegio_id: string, ano_ingre
 
 export async function obtenerAlumnos() {
   const supabase = await createClient();
+  const adminClient = createAdminClient();
   
   try {
     const colegio_id = await getCurrentColegioId(supabase);
 
-    let query = supabase
+    let query = adminClient
       .from("alumnos")
-      .select("*")
+      .select("*, carreras(nombre, diminutivo)")
       .order("apellido_y_nombre", { ascending: true });
 
     if (colegio_id) {
@@ -78,8 +81,14 @@ export async function obtenerAlumnos() {
     const { data: alumnos, error } = await query;
 
     if (error) throw error;
+
+    const mappedAlumnos: Alumno[] = (alumnos || []).map((a: any) => ({
+      ...a,
+      carrera: a.carreras?.nombre || a.carrera || null,
+      carrera_diminutivo: a.carreras?.diminutivo || null,
+    }));
     
-    return { success: true, data: alumnos as Alumno[] };
+    return { success: true, data: mappedAlumnos };
   } catch (error: any) {
     console.error("Error obteniendo alumnos:", error);
     return { success: false, error: error.message };
