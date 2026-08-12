@@ -268,25 +268,25 @@ export default function PortalAlumno() {
 
       {tab === 'finanzas' && (
         <div className="animate-in fade-in relative duration-300">
-          {/* Tarjeta de Bienvenida y Saldo */}
-          <div className="sticky top-0 z-20 pt-2 pb-4 bg-slate-50">
-            <div className="bg-indigo-900 text-white rounded-2xl p-5 md:p-6 shadow-xl border border-indigo-800 flex flex-col justify-center items-center gap-3">
-              <div className="text-center leading-none">
-                <p className="text-indigo-200 text-sm mb-1">Bienvenido/a,</p>
-                <h3 className="text-2xl md:text-3xl font-black tracking-tight uppercase">{data.nombre}</h3>
-                <p className="text-xs text-indigo-300 font-mono mt-1.5">CUIL: {formatearCuil(data.cuil)}</p>
+          {/* Tarjeta Compacta de Bienvenida y Saldo */}
+          <div className="sticky top-0 z-20 pt-1 pb-3 bg-slate-50">
+            <div className="bg-indigo-900 text-white rounded-xl p-3.5 sm:p-4 shadow-lg border border-indigo-800 flex justify-between items-center gap-3">
+              <div className="min-w-0 flex flex-col justify-center">
+                <p className="text-[10px] text-indigo-200 font-bold uppercase tracking-wider">Alumno</p>
+                <h3 className="text-sm sm:text-base md:text-lg font-black tracking-tight uppercase truncate leading-tight">{data.nombre}</h3>
+                <p className="text-[11px] text-indigo-300 font-mono mt-0.5">CUIL: {formatearCuil(data.cuil)}</p>
               </div>
-              <div className="text-center w-full border-t border-indigo-800/50 pt-4 leading-none">
-                <p className="text-indigo-200 text-sm font-medium mb-2">
+              <div className="text-right shrink-0 flex flex-col justify-center">
+                <p className="text-[10px] text-indigo-200 font-medium leading-tight">
                   {data.saldo > 0 ? (
-                    <span>Total a Pagar al <span className="font-mono">{new Date().toLocaleDateString('es-AR')}</span></span>
+                    <span>Total a Pagar</span>
                   ) : data.saldo < 0 ? (
-                    <span>Saldo a Favor al <span className="font-mono">{new Date().toLocaleDateString('es-AR')}</span></span>
+                    <span>Saldo a Favor</span>
                   ) : (
-                    <span>Cuenta al Día al <span className="font-mono">{new Date().toLocaleDateString('es-AR')}</span></span>
+                    <span>Cuenta al Día</span>
                   )}
                 </p>
-                <p className={`text-4xl md:text-5xl font-black drop-shadow-md tracking-tighter leading-none ${data.saldo > 0 ? 'text-rose-400' : 'text-emerald-400'}`}>
+                <p className={`text-xl sm:text-2xl md:text-3xl font-black drop-shadow-sm tracking-tight leading-none mt-0.5 ${data.saldo > 0 ? 'text-rose-400' : 'text-emerald-400'}`}>
                   $ {Math.abs(data.saldo).toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                 </p>
               </div>
